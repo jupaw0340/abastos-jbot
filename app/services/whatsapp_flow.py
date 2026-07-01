@@ -8,18 +8,11 @@ from app.services.order_service import recalculate_order
 SESSIONS = {}
 SESSION_TTL_MINUTES = 20
 
-
 PRICE_TYPE_LABELS = {
     "kg_suelto": "Kg suelto",
-    "kg_10plus": "10kg o mas",
+    "kg_10plus": "10kg o más",
     "bulk": "Arpilla/bulto/caja",
 }
-
-
-def get_text_from_message(message: dict) -> str:
-    if message.get("type") == "text":
-        return message.get("text", {}).get("body", "").strip()
-    return ""
 
 
 def normalize(text: str) -> str:
@@ -31,32 +24,18 @@ def normalize_phone(phone: str) -> str:
     return digits[-10:] if len(digits) >= 10 else digits
 
 
+def get_text_from_message(message: dict) -> str:
+    if message.get("type") == "text":
+        return message.get("text", {}).get("body", "").strip()
+    return ""
+
+
 def get_main_warehouse(db):
     return db.query(Warehouse).first()
 
 
 def get_state(db, warehouse_id: int):
     return db.query(SystemState).filter_by(warehouse_id=warehouse_id).first()
-
-
-def is_session_expired(session: dict) -> bool:
-    updated_at = session.get("updated_at")
-    if not updated_at:
-        return True
-    return datetime.utcnow() - updated_at > timedelta(minutes=SESSION_TTL_MINUTES)
-
-
-def touch_session(phone: str):
-    if phone in SESSIONS:
-        SESSIONS[phone]["updated_at"] = datetime.utcnow()
-
-
-def start_session(phone: str, step: str = "menu"):
-    SESSIONS[phone] = {
-        "step": step,
-        "items": [],
-        "updated_at": datetime.utcnow(),
-    }
 
 
 def get_or_create_customer(db, phone: str):
@@ -78,28 +57,47 @@ def get_or_create_customer(db, phone: str):
     return customer
 
 
+def customer_needs_name(customer: Customer) -> bool:
+    return customer.display_name == customer.phone or customer.display_name.isdigit()
+
+
+def start_session(phone: str, step: str = "menu"):
+    SESSIONS[phone] = {
+        "step": step,
+        "items": [],
+        "updated_at": datetime.utcnow(),
+    }
+
+
+def is_session_expired(session: dict) -> bool:
+    updated_at = session.get("updated_at")
+    if not updated_at:
+        return True
+    return datetime.utcnow() - updated_at > timedelta(minutes=SESSION_TTL_MINUTES)
+
+
+def touch_session(phone: str):
+    if phone in SESSIONS:
+        SESSIONS[phone]["updated_at"] = datetime.utcnow()
+
+
+def menu_text() -> str:
+    return (
+        "Hola 👋\n"
+        "Soy *Abastos JBot*.\n\n"
+        "Elige una opción:\n\n"
+        "1. Hacer pedido\n"
+        "2. Ver mis pedidos pendientes\n\n"
+        "Responde con el número."
+    )
+
+
 def get_available_products(db, warehouse_id: int):
     return (
         db.query(Product)
         .filter_by(warehouse_id=warehouse_id, available=True)
         .order_by(Product.id)
         .all()
-    )
-
-
-def menu_text(customer: Customer | None = None) -> str:
-    name = customer.display_name if customer else ""
-    greeting = f"Hola {name} 👋" if name and name != customer.phone else "Hola 👋"
-
-    return (
-        f"{greeting}\n"
-        "Soy *Abastos JBot*.\n\n"
-        "Elige una opción:\n\n"
-        "1. Hacer pedido\n"
-        "2. Ver mis pedidos pendientes\n"
-        "3. Dirección / horarios\n"
-        "4. Hablar con la bodega\n\n"
-        "Responde con el número."
     )
 
 
@@ -138,25 +136,21 @@ def pending_orders_text(db, customer: Customer) -> str:
     return "\n".join(lines)
 
 
-def cart_summary(session: dict, include_confirm: bool = True) -> str:
-    items = session.get("items", [])
-
-    if not items:
+def cart_summary(session: dict) -> str:
+    if not session.get("items"):
         return "Tu pedido está vacío."
 
     lines = ["🧾 *Resumen del pedido*"]
-    for idx, item in enumerate(items, start=1):
-        price_label = PRICE_TYPE_LABELS.get(item["price_type"], item["price_type"])
-        lines.append(f"{idx}. {item['product_name']} - {item['quantity']} - {price_label}")
+    for idx, item in enumerate(session["items"], start=1):
+        label = PRICE_TYPE_LABELS.get(item["price_type"], item["price_type"])
+        lines.append(f"{idx}. {item['product_name']} - {item['quantity']} - {label}")
 
     delivery = session.get("delivery_place") or "Recoge en bodega"
     lines.append(f"\nEntrega/recoge: {delivery}")
-
-    if include_confirm:
-        lines.append("\nResponde:")
-        lines.append("*confirmar* para registrar")
-        lines.append("*agregar* para agregar otro producto")
-        lines.append("*cancelar* para cancelar")
+    lines.append("\nResponde:")
+    lines.append("*confirmar* para registrar")
+    lines.append("*agregar* para agregar otro producto")
+    lines.append("*cancelar* para cancelar")
 
     return "\n".join(lines)
 
@@ -175,19 +169,13 @@ def create_order_from_session(db, phone: str):
     state = get_state(db, warehouse.id)
     customer = get_or_create_customer(db, phone)
 
-    if session.get("customer_name"):
-        customer.display_name = session["customer_name"]
-
-    if session.get("delivery_place"):
-        customer.default_delivery_place = session["delivery_place"]
-
     order = Order(
         folio=get_next_folio(db, warehouse.id),
         warehouse_id=warehouse.id,
         customer_id=customer.id,
         customer_name=customer.display_name,
-        delivery_place=session.get("delivery_place") or customer.default_delivery_place,
-        pickup=False if (session.get("delivery_place") or customer.default_delivery_place) else True,
+        delivery_place=session.get("delivery_place") or None,
+        pickup=False if session.get("delivery_place") else True,
         status="pendiente",
         payment_status="pendiente",
         in_queue=not state.orders_open,
@@ -217,8 +205,6 @@ def create_order_from_session(db, phone: str):
 
     db.commit()
     db.refresh(order)
-    db.refresh(customer)
-
     return order
 
 
@@ -234,7 +220,7 @@ def handle_incoming_text(phone: str, text: str) -> str:
 
         if lower in ["hola", "menu", "menú", "inicio", "empezar"]:
             start_session(phone, "menu")
-            return menu_text(customer)
+            return menu_text()
 
         if lower in ["cancelar", "salir"]:
             SESSIONS.pop(phone, None)
@@ -249,34 +235,21 @@ def handle_incoming_text(phone: str, text: str) -> str:
 
         if step == "menu":
             if lower in ["1", "pedido", "hacer pedido", "comprar"]:
-                if customer.display_name == phone:
+                if customer_needs_name(customer):
                     session["step"] = "ask_name"
                     return "¿A nombre de quién será el pedido?"
 
-                session["customer_name"] = customer.display_name
-                session["step"] = "ask_delivery_confirm"
-                default_delivery = customer.default_delivery_place or "Recoge en bodega"
+                session["step"] = "ask_delivery"
                 return (
-                    f"Pedido a nombre de *{customer.display_name}*.\n"
-                    f"Entrega habitual: *{default_delivery}*.\n\n"
-                    "¿Quieres usar esos datos?\n"
+                    f"Pedido a nombre de *{customer.display_name}*.\n\n"
+                    "¿Será entregado en alguna bodega del mercado?\n"
                     "Responde *si* o *no*."
                 )
 
             if lower == "2":
                 return pending_orders_text(db, customer)
 
-            if lower == "3":
-                return (
-                    "Estamos en el Mercado de Abastos, Morelia.\n"
-                    "Horario sujeto a disponibilidad del día.\n\n"
-                    "Escribe *pedido* para hacer un pedido."
-                )
-
-            if lower == "4":
-                return "Para hablar con la bodega, llama o manda mensaje directo al encargado."
-
-            return menu_text(customer)
+            return menu_text()
 
         if step == "ask_name":
             session["pending_customer_name"] = text.strip()
@@ -289,27 +262,14 @@ def handle_incoming_text(phone: str, text: str) -> str:
 
         if step == "confirm_name":
             if lower in ["si", "sí", "s", "correcto", "confirmar"]:
-                session["customer_name"] = session["pending_customer_name"]
+                customer.display_name = session["pending_customer_name"]
             else:
-                session["customer_name"] = text.strip()
+                customer.display_name = text.strip()
 
-            customer.display_name = session["customer_name"]
             db.commit()
             session["step"] = "ask_delivery"
             return (
-                f"Perfecto, pedido a nombre de *{session['customer_name']}*.\n\n"
-                "¿Será entregado en alguna bodega del mercado?\n"
-                "Responde *si* o *no*."
-            )
-
-        if step == "ask_delivery_confirm":
-            if lower in ["si", "sí", "s"]:
-                session["delivery_place"] = customer.default_delivery_place or ""
-                session["step"] = "choose_product"
-                return products_text(db, warehouse.id)
-
-            session["step"] = "ask_delivery"
-            return (
+                f"Perfecto, pedido a nombre de *{customer.display_name}*.\n\n"
                 "¿Será entregado en alguna bodega del mercado?\n"
                 "Responde *si* o *no*."
             )
@@ -319,9 +279,12 @@ def handle_incoming_text(phone: str, text: str) -> str:
                 session["step"] = "ask_delivery_place"
                 return "Escribe el nombre de la bodega donde se entregará."
 
-            session["delivery_place"] = ""
-            session["step"] = "choose_product"
-            return products_text(db, warehouse.id)
+            if lower in ["no", "n"]:
+                session["delivery_place"] = ""
+                session["step"] = "choose_product"
+                return products_text(db, warehouse.id)
+
+            return "Responde *si* si se entrega en otra bodega o *no* si recoge en nuestra bodega."
 
         if step == "ask_delivery_place":
             session["pending_delivery_place"] = text.strip()
@@ -338,8 +301,6 @@ def handle_incoming_text(phone: str, text: str) -> str:
             else:
                 session["delivery_place"] = text.strip()
 
-            customer.default_delivery_place = session["delivery_place"]
-            db.commit()
             session["step"] = "choose_product"
             return products_text(db, warehouse.id)
 
@@ -383,7 +344,11 @@ def handle_incoming_text(phone: str, text: str) -> str:
 
             session["current_price_type"] = mapping[lower]
             session["step"] = "ask_quantity"
-            return f"¿Cuántos kg/piezas de *{session['current_product_name']}* quieres?"
+
+            if mapping[lower] == "bulk":
+                return f"¿Cuántas arpillas/bultos/cajas de *{session['current_product_name']}* quieres?"
+
+            return f"¿Cuántos kg de *{session['current_product_name']}* quieres?"
 
         if step == "ask_quantity":
             try:
@@ -393,6 +358,9 @@ def handle_incoming_text(phone: str, text: str) -> str:
 
             if quantity <= 0:
                 return "La cantidad debe ser mayor a 0."
+
+            if session["current_price_type"] == "kg_10plus" and quantity < 10:
+                return "Ese precio es solo para 10kg o más. Escribe una cantidad de 10kg o más, o escribe *cancelar* para empezar de nuevo."
 
             session["items"].append({
                 "product_id": session["current_product_id"],
@@ -434,7 +402,7 @@ def handle_incoming_text(phone: str, text: str) -> str:
                 "Te avisaremos cuando esté listo."
             )
 
-        return menu_text(customer)
+        return menu_text()
 
     finally:
         db.close()
