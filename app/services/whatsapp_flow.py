@@ -266,11 +266,13 @@ def handle_incoming_text(phone: str, text: str) -> str:
             else:
                 customer.display_name = text.strip()
 
+            customer.is_active = True
             db.commit()
             session["step"] = "ask_delivery"
             return (
                 f"Perfecto, pedido a nombre de *{customer.display_name}*.\n\n"
                 "¿Será entregado en alguna bodega del mercado?\n"
+                "Si no se entrega en una bodega, su pedido lo estará esperando en nuestra bodega *Chiles Hernández*.\n\n"
                 "Responde *si* o *no*."
             )
 
