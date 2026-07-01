@@ -88,3 +88,12 @@ def customer_detail(customer_id: int, request: Request, db: Session = Depends(ge
         "total": total,
         "app_name": settings.APP_NAME,
     })
+
+
+@router.post("/admin/clientes/{customer_id}/eliminar")
+def delete_customer(customer_id: int, db: Session = Depends(get_db)):
+    customer = db.get(Customer, customer_id)
+    if customer:
+        customer.is_active = False
+        db.commit()
+    return RedirectResponse("/admin/clientes", status_code=303)

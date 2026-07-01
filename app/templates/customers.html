@@ -19,6 +19,9 @@
     <p><b>Entrega:</b> {{ c.default_delivery_place or "-" }}</p>
     <p><b>Notas:</b> {{ c.notes or "-" }}</p>
     <a class="btn-link" href="/admin/clientes/{{ c.id }}">Ver cliente</a>
+    <form method="post" action="/admin/clientes/{{ c.id }}/eliminar" style="display:inline-block;margin-left:8px">
+      <button class="danger">Eliminar</button>
+    </form>
   </div>
 {% else %}
   <div class="card">No hay clientes guardados.</div>
