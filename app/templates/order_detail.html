@@ -1,0 +1,63 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Pedido #{{ order.folio }}</h2>
+  <p><b>Cliente:</b> {{ order.customer_name }}</p>
+  <p><b>Entrega/recoge:</b> {{ order.delivery_place or "Recoge en bodega" }}</p>
+  <p>
+    <span class="pill">{{ order.status }}</span>
+    <span class="pill">{{ order.payment_status }}</span>
+    {% if order.in_queue %}<span class="pill bad">En fila</span>{% endif %}
+  </p>
+</div>
+
+<div class="card">
+  <h3>Productos</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Tipo</th>
+        <th>Cantidad</th>
+        <th>Precio</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for it in order.items %}
+      <tr>
+        <td>{{ it.product_name }}</td>
+        <td>{{ it.price_type }}</td>
+        <td>{{ it.quantity }}</td>
+        <td>${{ it.unit_price }}</td>
+        <td>${{ it.subtotal }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <h2>Total: ${{ order.total }}</h2>
+</div>
+
+<div class="card">
+  <h3>Acciones rápidas</h3>
+
+  <form method="post" action="/admin/pedidos/{{ order.id }}/rapido" style="display:inline-block;margin-right:8px">
+    <input type="hidden" name="status" value="listo">
+    <button class="btn">Marcar listo</button>
+  </form>
+
+  <form method="post" action="/admin/pedidos/{{ order.id }}/rapido" style="display:inline-block;margin-right:8px">
+    <input type="hidden" name="status" value="completado">
+    <button class="btn">Marcar completado</button>
+  </form>
+
+  <form method="post" action="/admin/pedidos/{{ order.id }}/rapido" style="display:inline-block">
+    <input type="hidden" name="status" value="cancelado">
+    <button class="danger">Cancelar</button>
+  </form>
+</div>
+
+<div class="card">
+  <a href="/admin/pedidos?status=todos">Volver a pedidos</a>
+</div>
+{% endblock %}

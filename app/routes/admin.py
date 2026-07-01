@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.db.database import get_db
 from app.models.models import Product, Order, OrderItem, SystemState, Warehouse
 from app.core.config import settings
+from app.services.order_service import recalculate_open_orders, recalculate_order
 from fastapi.templating import Jinja2Templates
 
 router = APIRouter()
@@ -185,6 +186,11 @@ def create_manual_order(
     state.current_folio += 1
 
     db.add(order)
+    db.flush()
+
+    if state.orders_open:
+        recalculate_order(order, db)
+
     db.commit()
 
     return RedirectResponse("/admin/pedidos?status=pendiente", status_code=303)
@@ -209,6 +215,41 @@ def orders(request: Request, status: str = "pendiente", db: Session = Depends(ge
     })
 
 
+
+
+@router.get("/admin/pedidos/{order_id}", response_class=HTMLResponse)
+def order_detail(order_id: int, request: Request, db: Session = Depends(get_db)):
+    redirect = require_login(request)
+    if redirect:
+        return redirect
+
+    warehouse = get_main_warehouse(db)
+    order = db.query(Order).options(joinedload(Order.items)).filter(Order.id == order_id).first()
+
+    if not order:
+        return RedirectResponse("/admin/pedidos?status=todos", status_code=303)
+
+    return templates.TemplateResponse(request, "order_detail.html", {
+        "request": request,
+        "warehouse": warehouse,
+        "order": order,
+        "app_name": settings.APP_NAME,
+    })
+
+
+@router.post("/admin/pedidos/{order_id}/rapido")
+def quick_order_status(
+    order_id: int,
+    status: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    order = db.get(Order, order_id)
+    if order:
+        order.status = status
+        db.commit()
+    return RedirectResponse(f"/admin/pedidos/{order_id}", status_code=303)
+
+
 @router.post("/admin/pedidos/{order_id}/estado")
 def update_order_status(
     order_id: int,
@@ -220,6 +261,26 @@ def update_order_status(
     if order:
         order.status = status
         order.payment_status = payment_status
+        db.commit()
+    return RedirectResponse("/admin/pedidos?status=todos", status_code=303)
+
+
+
+
+@router.post("/admin/pedidos/recalcular")
+def recalculate_orders(db: Session = Depends(get_db)):
+    warehouse = get_main_warehouse(db)
+    recalculate_open_orders(db, warehouse.id)
+    return RedirectResponse("/admin/pedidos?status=todos", status_code=303)
+
+
+
+
+@router.post("/admin/pedidos/{order_id}/eliminar")
+def delete_order(order_id: int, db: Session = Depends(get_db)):
+    order = db.get(Order, order_id)
+    if order:
+        db.delete(order)
         db.commit()
     return RedirectResponse("/admin/pedidos?status=todos", status_code=303)
 
@@ -244,7 +305,9 @@ def open_orders(db: Session = Depends(get_db)):
     for order in queued:
         order.in_queue = False
         order.has_prices = True
+
     db.commit()
+    recalculate_open_orders(db, warehouse.id)
     return RedirectResponse("/admin", status_code=303)
 
 

@@ -8,14 +8,18 @@
     <a href="/admin/pedidos?status=cancelado">Cancelados</a> |
     <a href="/admin/pedidos?status=todos">Todos</a>
   </p>
+  <form method="post" action="/admin/pedidos/recalcular">
+    <button class="btn">Recalcular pedidos con precios actuales</button>
+  </form>
 </div>
 
 {% for o in orders %}
 <div class="card">
   <h3>Folio #{{ o.folio }} - {{ o.customer_name }}</h3>
+  <p><a class="btn-link" href="/admin/pedidos/{{ o.id }}">Ver detalle</a></p>
   <p>
-    <span class="pill">{{ o.status }}</span>
-    <span class="pill">{{ o.payment_status }}</span>
+    <span class="pill status-{{ o.status }}">{{ o.status }}</span>
+    <span class="pill pay-{{ o.payment_status }}">{{ o.payment_status }}</span>
     {% if o.in_queue %}<span class="pill bad">En fila</span>{% endif %}
   </p>
   <p><b>Entrega/recoge:</b> {{ o.delivery_place or "Recoge en bodega" }}</p>
@@ -47,8 +51,46 @@
     </select>
     <button class="btn">Actualizar</button>
   </form>
+
+  <form method="post" action="/admin/pedidos/{{ o.id }}/eliminar" onsubmit="return confirmDelete(event, this)" style="margin-top:10px">
+    <button class="danger">Eliminar pedido</button>
+  </form>
 </div>
 {% else %}
 <div class="card">No hay pedidos.</div>
 {% endfor %}
+
+<div id="deleteModal" class="modal-bg" style="display:none">
+  <div class="modal-box">
+    <h2>Eliminar pedido</h2>
+    <p>¿Seguro que quieres eliminar este pedido?</p>
+    <div class="modal-actions">
+      <button class="danger" onclick="submitDelete()">Sí, eliminar</button>
+      <button class="btn" onclick="closeDeleteModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let deleteForm = null;
+
+function confirmDelete(event, form){
+  event.preventDefault();
+  deleteForm = form;
+  document.getElementById("deleteModal").style.display = "flex";
+  return false;
+}
+
+function closeDeleteModal(){
+  deleteForm = null;
+  document.getElementById("deleteModal").style.display = "none";
+}
+
+function submitDelete(){
+  if(deleteForm){
+    deleteForm.submit();
+  }
+}
+</script>
 {% endblock %}
+

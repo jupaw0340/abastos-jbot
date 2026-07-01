@@ -2,83 +2,213 @@
 {% block content %}
 <div class="card">
   <h2>Nuevo pedido manual</h2>
-  <p class="muted">Agrega los productos que necesite el cliente.</p>
+  <p class="muted">Busca producto o seleccionalo directo, captura cantidad y agregalo al pedido.</p>
 
   <form method="post" action="/admin/pedidos/nuevo" id="orderForm">
+    <div id="formError" class="form-error" style="display:none"></div>
+
     <p>
       <label>Cliente</label><br>
-      <input style="max-width:420px;width:100%" type="text" name="customer_name" required>
+      <input class="wide-input" type="text" name="customer_name" required>
     </p>
 
     <p>
       <label>Lugar de entrega (opcional)</label><br>
-      <input style="max-width:520px;width:100%" type="text" name="delivery_place" placeholder="Ej. Bodega de Julio">
+      <input class="wide-input" type="text" name="delivery_place" placeholder="Ej. Bodega de Julio">
     </p>
 
-    <div id="items"></div>
+    <div class="pos-box">
+      <label>Buscar producto</label>
+      <input id="searchProduct" class="wide-input" type="text" placeholder="Ej. serrano, jalapeno, tomate..." autocomplete="off">
 
-    <button type="button" class="btn" onclick="addItem()">Agregar otro producto</button>
-    <br><br>
+      <div id="productResults" class="results"></div>
+
+      <p class="muted">O selecciona directo:</p>
+      <div class="quick-products">
+        {% for p in products %}
+          <button type="button" class="quick-product-btn" onclick='selectProduct({id: "{{ p.id }}", name: "{{ p.name }}"})'>
+            {{ p.name }}
+          </button>
+        {% endfor %}
+      </div>
+
+      <div class="selected-product-box">
+        Producto seleccionado: <b id="selectedProductName">Ninguno</b>
+      </div>
+
+      <div class="pos-row">
+        <div>
+          <label>Tipo precio</label>
+          <select id="priceType">
+            <option value="kg_suelto">Kg suelto</option>
+            <option value="kg_10plus">10kg o mas</option>
+            <option value="bulk">Arpilla/bulto/caja</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Cantidad</label>
+          <input id="quantity" type="number" step="0.01" min="0.01" placeholder="0">
+        </div>
+
+        <button type="button" class="btn add-btn" onclick="addSelected()">Agregar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pedido</h3>
+      <div id="emptyCart" class="muted">Todavia no hay productos.</div>
+      <table id="cartTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Tipo</th>
+            <th>Cantidad</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="cartBody"></tbody>
+      </table>
+    </div>
+
     <button class="btn big-btn" type="submit">Crear pedido</button>
   </form>
 </div>
 
-<template id="itemTemplate">
-  <div class="card item-row">
-    <label>Producto</label>
-    <select name="product_ids" required>
-      <option value="">-- seleccionar --</option>
-      {% for p in products %}
-        <option value="{{ p.id }}">{{ p.name }}</option>
-      {% endfor %}
-    </select>
-
-    <label>Tipo precio</label>
-    <select name="price_types">
-      <option value="kg_suelto">Kg suelto</option>
-      <option value="kg_10plus">10kg o mas</option>
-      <option value="bulk">Arpilla/bulto/caja</option>
-    </select>
-
-    <label>Cantidad</label>
-    <input type="number" step="0.01" min="0.01" name="quantities" required>
-
-    <br><br>
-    <button type="button" class="danger" onclick="removeItem(this)">Quitar producto</button>
-  </div>
-</template>
-
 <script>
-function addItem(){
-  const tpl = document.getElementById("itemTemplate");
-  document.getElementById("items").appendChild(tpl.content.cloneNode(true));
+const products = [
+  {% for p in products %}
+    {id: "{{ p.id }}", name: "{{ p.name }}"},
+  {% endfor %}
+];
+
+let selectedProduct = null;
+
+function showFormError(message){
+  const box = document.getElementById("formError");
+  box.textContent = message;
+  box.style.display = "block";
+  box.scrollIntoView({behavior: "smooth", block: "center"});
+  setTimeout(() => { box.style.display = "none"; }, 3500);
 }
 
-function removeItem(btn){
-  btn.closest(".item-row").remove();
-  if(document.querySelectorAll(".item-row").length === 0){
-    addItem();
+function normalize(text){
+  return text.toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function selectProduct(p){
+  selectedProduct = p;
+  document.getElementById("searchProduct").value = p.name;
+  document.getElementById("selectedProductName").textContent = p.name;
+  document.getElementById("productResults").innerHTML = "";
+  document.getElementById("quantity").focus();
+}
+
+function renderResults(){
+  const q = normalize(document.getElementById("searchProduct").value.trim());
+  const box = document.getElementById("productResults");
+  box.innerHTML = "";
+
+  if(!q){
+    selectedProduct = null;
+    document.getElementById("selectedProductName").textContent = "Ninguno";
+    return;
   }
+
+  const matches = products
+    .filter(p => normalize(p.name).includes(q))
+    .slice(0, 8);
+
+  matches.forEach(p => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "result-btn";
+    btn.textContent = p.name;
+    btn.onclick = () => selectProduct(p);
+    box.appendChild(btn);
+  });
 }
 
-document.getElementById("orderForm").addEventListener("submit", function(e){
-  const rows = document.querySelectorAll(".item-row");
-  let valid = false;
+function labelPriceType(value){
+  if(value === "kg_suelto") return "Kg suelto";
+  if(value === "kg_10plus") return "10kg o mas";
+  return "Arpilla/bulto/caja";
+}
 
-  rows.forEach(row => {
-    const product = row.querySelector('select[name="product_ids"]').value;
-    const qty = parseFloat(row.querySelector('input[name="quantities"]').value || "0");
-    if(product && qty > 0){
-      valid = true;
-    }
-  });
+function addSelected(){
+  const qtyInput = document.getElementById("quantity");
+  const qty = parseFloat(qtyInput.value || "0");
+  const priceType = document.getElementById("priceType").value;
 
-  if(!valid){
+  if(!selectedProduct){
+    showFormError("Selecciona un producto.");
+    document.getElementById("searchProduct").focus();
+    return;
+  }
+
+  if(!qty || qty <= 0){
+    showFormError("La cantidad debe ser mayor a 0.");
+    qtyInput.focus();
+    return;
+  }
+
+  const tbody = document.getElementById("cartBody");
+  const tr = document.createElement("tr");
+
+  tr.innerHTML = `
+    <td>
+      ${selectedProduct.name}
+      <input type="hidden" name="product_ids" value="${selectedProduct.id}">
+    </td>
+    <td>
+      ${labelPriceType(priceType)}
+      <input type="hidden" name="price_types" value="${priceType}">
+    </td>
+    <td>
+      ${qty}
+      <input type="hidden" name="quantities" value="${qty}">
+    </td>
+    <td>
+      <button type="button" class="danger" onclick="this.closest('tr').remove(); refreshCart();">Quitar</button>
+    </td>
+  `;
+
+  tbody.appendChild(tr);
+
+  selectedProduct = null;
+  document.getElementById("searchProduct").value = "";
+  document.getElementById("selectedProductName").textContent = "Ninguno";
+  qtyInput.value = "";
+  document.getElementById("productResults").innerHTML = "";
+  document.getElementById("searchProduct").focus();
+
+  refreshCart();
+}
+
+function refreshCart(){
+  const rows = document.querySelectorAll("#cartBody tr").length;
+  document.getElementById("cartTable").style.display = rows ? "table" : "none";
+  document.getElementById("emptyCart").style.display = rows ? "none" : "block";
+}
+
+document.getElementById("searchProduct").addEventListener("input", renderResults);
+
+document.getElementById("quantity").addEventListener("keydown", function(e){
+  if(e.key === "Enter"){
     e.preventDefault();
-    alert("Agrega al menos un producto con cantidad mayor a 0.");
+    addSelected();
   }
 });
 
-addItem();
+document.getElementById("orderForm").addEventListener("submit", function(e){
+  const rows = document.querySelectorAll("#cartBody tr").length;
+  if(rows === 0){
+    e.preventDefault();
+    showFormError("Agrega al menos un producto al pedido.");
+    document.getElementById("searchProduct").focus();
+  }
+});
 </script>
 {% endblock %}

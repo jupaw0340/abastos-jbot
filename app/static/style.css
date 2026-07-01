@@ -64,3 +64,162 @@
   font-size:20px;
   padding:14px 24px;
 }
+
+.wide-input{
+  max-width:520px!important;
+  width:100%;
+  box-sizing:border-box;
+  font-size:18px;
+  padding:12px;
+}
+
+.pos-box{
+  background:#f8fafc;
+  border:1px solid #dbe5dd;
+  border-radius:16px;
+  padding:16px;
+  margin:18px 0;
+}
+
+.pos-row{
+  display:flex;
+  gap:14px;
+  align-items:end;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+
+.pos-row input,
+.pos-row select{
+  font-size:18px;
+  padding:12px;
+}
+
+.add-btn{
+  font-size:18px;
+  padding:13px 22px;
+}
+
+.results{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.result-btn{
+  background:#dcfce7;
+  color:#14532d;
+  border:1px solid #86efac;
+  border-radius:999px;
+  padding:10px 14px;
+  font-weight:bold;
+}
+
+.result-btn:hover{
+  background:#bbf7d0;
+}
+
+
+.quick-products{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:10px 0 14px 0;
+}
+
+.quick-product-btn{
+  background:#ffffff;
+  border:2px solid #86efac;
+  color:#14532d;
+  border-radius:14px;
+  padding:14px 18px;
+  font-size:18px;
+  font-weight:bold;
+}
+
+.quick-product-btn:hover{
+  background:#dcfce7;
+}
+
+.selected-product-box{
+  background:#ecfdf5;
+  border:1px solid #86efac;
+  padding:12px;
+  border-radius:12px;
+  margin-top:10px;
+  font-size:18px;
+}
+
+
+.form-error{
+  background:#fee2e2;
+  color:#991b1b;
+  border:1px solid #fecaca;
+  border-radius:12px;
+  padding:12px 14px;
+  margin-bottom:14px;
+  font-weight:bold;
+}
+
+
+.btn-link{
+  display:inline-block;
+  background:#15803d;
+  color:white;
+  text-decoration:none;
+  padding:8px 12px;
+  border-radius:8px;
+  font-weight:bold;
+}
+
+
+.modal-bg{
+  position:fixed;
+  inset:0;
+  background:#0008;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+
+.modal-box{
+  background:white;
+  width:90%;
+  max-width:420px;
+  border-radius:18px;
+  padding:24px;
+  box-shadow:0 20px 50px #0007;
+}
+
+.modal-box h2{
+  margin-top:0;
+  color:#14532d;
+}
+
+.modal-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:18px;
+}
+
+.pill{
+  font-weight:bold;
+}
+
+.pill:has(+ .pill){
+  margin-right:6px;
+}
+
+
+.status-pendiente{background:#fef3c7;color:#92400e}
+.status-listo{background:#dbeafe;color:#1d4ed8}
+.status-completado{background:#dcfce7;color:#166534}
+.status-cancelado{background:#fee2e2;color:#991b1b}
+
+.pay-pendiente{background:#f3f4f6;color:#374151}
+.pay-pagado{background:#dcfce7;color:#166534}
+.pay-abonado{background:#e0f2fe;color:#075985}
+.pay-fiado{background:#fde68a;color:#92400e}
+
