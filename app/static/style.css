@@ -269,3 +269,18 @@
   align-items:center;
 }
 
+
+.customer-form{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:end;
+}
+
+.customer-form input{
+  max-width:none;
+  min-width:210px;
+  font-size:16px;
+  padding:11px;
+}
+

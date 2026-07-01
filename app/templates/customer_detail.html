@@ -1,0 +1,28 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>{{ customer.display_name }}</h2>
+  <p><b>Telefono:</b> {{ customer.phone or "-" }}</p>
+  <p><b>Entrega habitual:</b> {{ customer.default_delivery_place or "-" }}</p>
+  <p><b>Notas:</b> {{ customer.notes or "-" }}</p>
+  <h3>Total historico: ${{ total }}</h3>
+</div>
+
+<div class="card">
+  <h2>Ultimos pedidos</h2>
+</div>
+
+{% for o in orders %}
+<div class="order-card">
+  <h3>Folio #{{ o.folio }}</h3>
+  <p>
+    <span class="pill status-{{ o.status }}">{{ o.status }}</span>
+    <span class="pill pay-{{ o.payment_status }}">{{ o.payment_status }}</span>
+  </p>
+  <p><b>Total:</b> ${{ o.total }}</p>
+  <a class="btn-link" href="/admin/pedidos/{{ o.id }}">Ver pedido</a>
+</div>
+{% else %}
+<div class="card">Este cliente aun no tiene pedidos.</div>
+{% endfor %}
+{% endblock %}

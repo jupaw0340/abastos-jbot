@@ -1,0 +1,27 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Clientes</h2>
+  <form method="post" action="/admin/clientes/nuevo" class="customer-form">
+    <input type="text" name="display_name" placeholder="Nombre del cliente" required>
+    <input type="text" name="phone" placeholder="Telefono">
+    <input type="text" name="default_delivery_place" placeholder="Entrega habitual">
+    <input type="text" name="notes" placeholder="Notas">
+    <button class="btn">Agregar cliente</button>
+  </form>
+</div>
+
+<div class="orders-grid">
+{% for c in customers %}
+  <div class="order-card">
+    <h3>{{ c.display_name }}</h3>
+    <p><b>Telefono:</b> {{ c.phone or "-" }}</p>
+    <p><b>Entrega:</b> {{ c.default_delivery_place or "-" }}</p>
+    <p><b>Notas:</b> {{ c.notes or "-" }}</p>
+    <a class="btn-link" href="/admin/clientes/{{ c.id }}">Ver cliente</a>
+  </div>
+{% else %}
+  <div class="card">No hay clientes guardados.</div>
+{% endfor %}
+</div>
+{% endblock %}

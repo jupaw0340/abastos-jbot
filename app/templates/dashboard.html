@@ -6,12 +6,28 @@
     <div class="big">{{ pending_count }}</div>
   </div>
   <div class="card">
+    <div class="muted">Pedidos listos</div>
+    <div class="big">{{ ready_count }}</div>
+  </div>
+  <div class="card">
     <div class="muted">Pedidos en fila</div>
     <div class="big">{{ queue_count }}</div>
   </div>
   <div class="card">
     <div class="muted">Completados</div>
     <div class="big">{{ completed_count }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Cancelados</div>
+    <div class="big">{{ cancelled_count }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Pagos pendientes</div>
+    <div class="big">{{ unpaid_count }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Total registrado</div>
+    <div class="big">${{ sales_total }}</div>
   </div>
 </div>
 

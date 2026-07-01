@@ -8,13 +8,25 @@
     <div id="formError" class="form-error" style="display:none"></div>
 
     <p>
-      <label>Cliente</label><br>
-      <input class="wide-input" type="text" name="customer_name" required>
+      <label>Cliente registrado</label><br>
+      <select class="wide-input" id="customerSelect" onchange="selectCustomer()">
+        <option value="">-- Cliente nuevo / escribir manual --</option>
+        {% for c in customers %}
+          <option value="{{ c.display_name }}" data-delivery="{{ c.default_delivery_place or '' }}">
+            {{ c.display_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </p>
+
+    <p>
+      <label>Nombre del cliente</label><br>
+      <input class="wide-input" id="customerName" type="text" name="customer_name" required>
     </p>
 
     <p>
       <label>Lugar de entrega (opcional)</label><br>
-      <input class="wide-input" type="text" name="delivery_place" placeholder="Ej. Bodega de Julio">
+      <input class="wide-input" id="deliveryPlace" type="text" name="delivery_place" placeholder="Ej. Bodega de Julio">
     </p>
 
     <div class="pos-box">
@@ -83,6 +95,14 @@ const products = [
 ];
 
 let selectedProduct = null;
+
+function selectCustomer(){
+  const select = document.getElementById("customerSelect");
+  const selected = select.options[select.selectedIndex];
+
+  document.getElementById("customerName").value = selected.value || "";
+  document.getElementById("deliveryPlace").value = selected.dataset.delivery || "";
+}
 
 function showFormError(message){
   const box = document.getElementById("formError");

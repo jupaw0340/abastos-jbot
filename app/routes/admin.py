@@ -2,7 +2,7 @@
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session, joinedload
 from app.db.database import get_db
-from app.models.models import Product, Order, OrderItem, SystemState, Warehouse
+from app.models.models import Product, Order, OrderItem, SystemState, Warehouse, Customer
 from app.core.config import settings
 from app.services.order_service import recalculate_open_orders, recalculate_order, close_order_day, open_order_day
 from fastapi.templating import Jinja2Templates
@@ -41,6 +41,11 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     pending_count = db.query(Order).filter(Order.warehouse_id == warehouse.id, Order.status == "pendiente").count()
     queue_count = db.query(Order).filter(Order.warehouse_id == warehouse.id, Order.in_queue == True).count()
     completed_count = db.query(Order).filter(Order.warehouse_id == warehouse.id, Order.status == "completado").count()
+    ready_count = db.query(Order).filter(Order.warehouse_id == warehouse.id, Order.status == "listo").count()
+    cancelled_count = db.query(Order).filter(Order.warehouse_id == warehouse.id, Order.status == "cancelado").count()
+    unpaid_count = db.query(Order).filter(Order.warehouse_id == warehouse.id, Order.payment_status == "pendiente").count()
+    sales_total = sum(float(o.total or 0) for o in db.query(Order).filter(Order.warehouse_id == warehouse.id, Order.status != "cancelado").all())
+
     return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "warehouse": warehouse,
@@ -48,6 +53,10 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         "pending_count": pending_count,
         "queue_count": queue_count,
         "completed_count": completed_count,
+        "ready_count": ready_count,
+        "cancelled_count": cancelled_count,
+        "unpaid_count": unpaid_count,
+        "sales_total": sales_total,
         "app_name": settings.APP_NAME,
     })
 
@@ -101,10 +110,12 @@ def new_order_page(request: Request, db: Session = Depends(get_db)):
 
     warehouse = get_main_warehouse(db)
     products = db.query(Product).filter_by(warehouse_id=warehouse.id, available=True).order_by(Product.id).all()
+    customers = db.query(Customer).filter_by(is_active=True).order_by(Customer.display_name).all()
     return templates.TemplateResponse(request, "new_order.html", {
         "request": request,
         "warehouse": warehouse,
         "products": products,
+        "customers": customers,
         "app_name": settings.APP_NAME,
     })
 
