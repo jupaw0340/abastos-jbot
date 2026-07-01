@@ -1,0 +1,56 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Pedidos</h2>
+  <p>
+    <a href="/admin/pedidos?status=pendiente">Pendientes</a> |
+    <a href="/admin/pedidos?status=completado">Completados</a> |
+    <a href="/admin/pedidos?status=cancelado">Cancelados</a> |
+    <a href="/admin/pedidos?status=todos">Todos</a>
+  </p>
+</div>
+
+{% for o in orders %}
+<div class="card">
+  <h3>Folio #{{ o.folio }} â€” {{ o.customer_name }}</h3>
+  <p>
+    <span class="pill">{{ o.status }}</span>
+    <span class="pill">{{ o.payment_status }}</span>
+    {% if o.in_queue %}<span class="pill bad">En fila</span>{% endif %}
+  </p>
+  <p><b>Entrega/recoge:</b> {{ o.delivery_place or "Recoge en bodega" }}</p>
+  <table>
+    <thead><tr><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr></thead>
+    <tbody>
+    {% for it in o.items %}
+      <tr>
+        <td>{{ it.product_name }}</td>
+        <td>{{ it.price_type }}</td>
+        <td>{{ it.quantity }}</td>
+        <td>${{ it.unit_price }}</td>
+        <td>${{ it.subtotal }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p><b>Total:</b> ${{ o.total }}</p>
+  <form method="post" action="/admin/pedidos/{{ o.id }}/estado">
+    <select name="status">
+      {% for s in ["pendiente","listo","completado","cancelado"] %}
+        <option value="{{ s }}" {% if o.status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <select name="payment_status">
+      {% for s in ["pendiente","pagado","abonado","fiado"] %}
+        <option value="{{ s }}" {% if o.payment_status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn">Actualizar</button>
+  </form>
+</div>
+{% else %}
+<div class="card">No hay pedidos.</div>
+{% endfor %}
+{% endblock %}
+
+

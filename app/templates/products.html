@@ -1,0 +1,38 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Precios e inventario</h2>
+  <p class="muted">Estos precios son los que vera WhatsApp.</p>
+  <form method="post" action="/admin/productos/guardar">
+    <table>
+      <thead>
+        <tr>
+          <th>Disponible</th>
+          <th>Producto</th>
+          <th>Kg suelto (&lt;10kg)</th>
+          <th>10kg o mas</th>
+          <th>Arpilla/bulto/caja por kg</th>
+          <th>Etiqueta</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for p in products %}
+        <tr>
+          <td>
+            <input type="hidden" name="product_ids" value="{{ p.id }}">
+            <input type="checkbox" name="available" value="{{ p.id }}" {% if p.available %}checked{% endif %}>
+          </td>
+          <td><b>{{ p.name }}</b></td>
+          <td><input type="number" step="0.01" name="price_kg_loose" value="{{ p.price_kg_loose }}"></td>
+          <td><input type="number" step="0.01" name="price_kg_10plus" value="{{ p.price_kg_10plus }}"></td>
+          <td><input type="number" step="0.01" name="price_kg_bulk" value="{{ p.price_kg_bulk }}"></td>
+          <td><input type="text" name="bulk_label" value="{{ p.bulk_label }}"></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <br>
+    <button class="btn">Guardar cambios</button>
+  </form>
+</div>
+{% endblock %}

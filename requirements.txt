@@ -1,0 +1,13 @@
+﻿fastapi
+uvicorn[standard]
+python-dotenv
+sqlalchemy
+psycopg2-binary
+jinja2
+python-multipart
+requests
+reportlab
+passlib[bcrypt]
+pydantic-settings
+itsdangerous
+

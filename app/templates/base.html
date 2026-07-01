@@ -1,0 +1,44 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>{{ app_name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#f3f4f6;color:#111827}
+    header{background:#14532d;color:white;padding:16px 22px}
+    nav{background:#166534;padding:10px 22px;display:flex;gap:10px;flex-wrap:wrap}
+    nav a{color:white;text-decoration:none;background:#15803d;padding:10px 14px;border-radius:8px;font-weight:bold}
+    main{padding:22px;max-width:1200px;margin:auto}
+    .card{background:white;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px #0001}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .big{font-size:34px;font-weight:bold}
+    table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden}
+    th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}
+    th{background:#dcfce7}
+    input,select{padding:8px;border:1px solid #d1d5db;border-radius:8px;max-width:130px}
+    button{border:0;border-radius:8px;padding:10px 14px;font-weight:bold;cursor:pointer}
+    .btn{background:#15803d;color:white}
+    .danger{background:#991b1b;color:white}
+    .muted{color:#6b7280}
+    .pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb}
+    .ok{background:#bbf7d0}
+    .bad{background:#fecaca}
+  </style>
+</head>
+<body>
+<header>
+  <h1 style="margin:0">{{ app_name }}</h1>
+  <div>{{ warehouse.name if warehouse else "" }}</div>
+</header>
+<nav>
+  <a href="/admin">Inicio</a>
+  <a href="/admin/productos">Precios e inventario</a>
+  <a href="/admin/pedidos">Pedidos pendientes</a>
+  <a href="/admin/pedidos?status=todos">Todos los pedidos</a>
+</nav>
+<main>
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,41 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="grid">
+  <div class="card">
+    <div class="muted">Pedidos pendientes</div>
+    <div class="big">{{ pending_count }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Pedidos en fila</div>
+    <div class="big">{{ queue_count }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Completados</div>
+    <div class="big">{{ completed_count }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Estado del dia</h2>
+  {% if state.orders_open %}
+    <p><span class="pill ok">Pedidos abiertos</span></p>
+    <form method="post" action="/admin/estado/cerrar">
+      <button class="danger">Cerrar pedidos del dia / mandar nuevos a fila</button>
+    </form>
+  {% else %}
+    <p><span class="pill bad">Pedidos cerrados: nuevos pedidos quedan en fila sin precios</span></p>
+    <form method="post" action="/admin/estado/abrir">
+      <button class="btn">Confirmar precios y abrir pedidos</button>
+    </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Folio actual</h2>
+  <p>Proximo folio: <b>{{ state.current_folio }}</b></p>
+  <form method="post" action="/admin/folio/reiniciar">
+    <input type="number" name="value" value="{{ state.current_folio }}" min="1">
+    <button class="btn">Cambiar folio</button>
+  </form>
+</div>
+{% endblock %}
