@@ -1,4 +1,4 @@
-﻿from app.models.models import Order, Product
+﻿from app.models.models import Order, Product, SystemState
 
 
 PRICE_TYPE_LABELS = {
@@ -6,6 +6,10 @@ PRICE_TYPE_LABELS = {
     "kg_10plus": "10kg o mas",
     "bulk": "Arpilla/bulto/caja",
 }
+
+
+def get_price_type_label(price_type: str) -> str:
+    return PRICE_TYPE_LABELS.get(price_type, price_type)
 
 
 def get_unit_price(product: Product, price_type: str) -> float:
@@ -20,12 +24,8 @@ def recalculate_order(order: Order, db) -> Order:
     total = 0
 
     for item in order.items:
-        if not item.product_id:
-            item.unit_price = 0
-            item.subtotal = 0
-            continue
+        product = db.get(Product, item.product_id) if item.product_id else None
 
-        product = db.get(Product, item.product_id)
         if not product:
             item.unit_price = 0
             item.subtotal = 0
@@ -42,7 +42,6 @@ def recalculate_order(order: Order, db) -> Order:
     order.total = total
     order.has_prices = True
     order.in_queue = False
-
     return order
 
 
@@ -59,3 +58,26 @@ def recalculate_open_orders(db, warehouse_id: int) -> int:
 
     db.commit()
     return len(orders)
+
+
+def close_order_day(db, warehouse_id: int) -> SystemState:
+    state = db.query(SystemState).filter_by(warehouse_id=warehouse_id).first()
+    state.orders_open = False
+    state.prices_confirmed = False
+    db.commit()
+    return state
+
+
+def open_order_day(db, warehouse_id: int) -> SystemState:
+    state = db.query(SystemState).filter_by(warehouse_id=warehouse_id).first()
+    state.orders_open = True
+    state.prices_confirmed = True
+
+    queued = db.query(Order).filter_by(warehouse_id=warehouse_id, in_queue=True).all()
+    for order in queued:
+        order.in_queue = False
+        order.has_prices = True
+
+    db.commit()
+    recalculate_open_orders(db, warehouse_id)
+    return state

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.db.database import get_db
 from app.models.models import Product, Order, OrderItem, SystemState, Warehouse
 from app.core.config import settings
-from app.services.order_service import recalculate_open_orders, recalculate_order
+from app.services.order_service import recalculate_open_orders, recalculate_order, close_order_day, open_order_day
 from fastapi.templating import Jinja2Templates
 
 router = APIRouter()
@@ -288,26 +288,14 @@ def delete_order(order_id: int, db: Session = Depends(get_db)):
 @router.post("/admin/estado/cerrar")
 def close_orders(db: Session = Depends(get_db)):
     warehouse = get_main_warehouse(db)
-    state = get_state(db, warehouse.id)
-    state.orders_open = False
-    state.prices_confirmed = False
-    db.commit()
+    close_order_day(db, warehouse.id)
     return RedirectResponse("/admin", status_code=303)
 
 
 @router.post("/admin/estado/abrir")
 def open_orders(db: Session = Depends(get_db)):
     warehouse = get_main_warehouse(db)
-    state = get_state(db, warehouse.id)
-    state.orders_open = True
-    state.prices_confirmed = True
-    queued = db.query(Order).filter_by(warehouse_id=warehouse.id, in_queue=True).all()
-    for order in queued:
-        order.in_queue = False
-        order.has_prices = True
-
-    db.commit()
-    recalculate_open_orders(db, warehouse.id)
+    open_order_day(db, warehouse.id)
     return RedirectResponse("/admin", status_code=303)
 
 

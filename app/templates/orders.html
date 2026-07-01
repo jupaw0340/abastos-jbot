@@ -2,70 +2,95 @@
 {% block content %}
 <div class="card">
   <h2>Pedidos</h2>
-  <p>
-    <a href="/admin/pedidos?status=pendiente">Pendientes</a> |
-    <a href="/admin/pedidos?status=completado">Completados</a> |
-    <a href="/admin/pedidos?status=cancelado">Cancelados</a> |
-    <a href="/admin/pedidos?status=todos">Todos</a>
-  </p>
-  <form method="post" action="/admin/pedidos/recalcular">
+
+  <div class="filter-row">
+    <a class="btn-link" href="/admin/pedidos?status=pendiente">Pendientes</a>
+    <a class="btn-link" href="/admin/pedidos?status=listo">Listos</a>
+    <a class="btn-link" href="/admin/pedidos?status=completado">Completados</a>
+    <a class="btn-link" href="/admin/pedidos?status=cancelado">Cancelados</a>
+    <a class="btn-link" href="/admin/pedidos?status=todos">Todos</a>
+  </div>
+
+  <form method="post" action="/admin/pedidos/recalcular" style="margin-top:14px">
     <button class="btn">Recalcular pedidos con precios actuales</button>
   </form>
 </div>
 
+<div class="orders-grid">
 {% for o in orders %}
-<div class="card">
-  <h3>Folio #{{ o.folio }} - {{ o.customer_name }}</h3>
-  <p><a class="btn-link" href="/admin/pedidos/{{ o.id }}">Ver detalle</a></p>
-  <p>
-    <span class="pill status-{{ o.status }}">{{ o.status }}</span>
-    <span class="pill pay-{{ o.payment_status }}">{{ o.payment_status }}</span>
-    {% if o.in_queue %}<span class="pill bad">En fila</span>{% endif %}
-  </p>
-  <p><b>Entrega/recoge:</b> {{ o.delivery_place or "Recoge en bodega" }}</p>
-  <table>
-    <thead><tr><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr></thead>
-    <tbody>
-    {% for it in o.items %}
-      <tr>
-        <td>{{ it.product_name }}</td>
-        <td>{{ it.price_type }}</td>
-        <td>{{ it.quantity }}</td>
-        <td>${{ it.unit_price }}</td>
-        <td>${{ it.subtotal }}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  <p><b>Total:</b> ${{ o.total }}</p>
-  <form method="post" action="/admin/pedidos/{{ o.id }}/estado">
-    <select name="status">
-      {% for s in ["pendiente","listo","completado","cancelado"] %}
-        <option value="{{ s }}" {% if o.status == s %}selected{% endif %}>{{ s }}</option>
-      {% endfor %}
-    </select>
-    <select name="payment_status">
-      {% for s in ["pendiente","pagado","abonado","fiado"] %}
-        <option value="{{ s }}" {% if o.payment_status == s %}selected{% endif %}>{{ s }}</option>
-      {% endfor %}
-    </select>
-    <button class="btn">Actualizar</button>
-  </form>
+  <div class="order-card">
+    <div class="order-head">
+      <div>
+        <h3>Folio #{{ o.folio }}</h3>
+        <div class="order-client">{{ o.customer_name }}</div>
+      </div>
+      <a class="btn-link" href="/admin/pedidos/{{ o.id }}">Ver detalle</a>
+    </div>
 
-  <form method="post" action="/admin/pedidos/{{ o.id }}/eliminar" onsubmit="return confirmDelete(event, this)" style="margin-top:10px">
-    <button class="danger">Eliminar pedido</button>
-  </form>
-</div>
+    <p>
+      <span class="pill status-{{ o.status }}">{{ o.status }}</span>
+      <span class="pill pay-{{ o.payment_status }}">{{ o.payment_status }}</span>
+      {% if o.in_queue %}<span class="pill bad">En fila</span>{% endif %}
+    </p>
+
+    <p><b>Entrega/recoge:</b> {{ o.delivery_place or "Recoge en bodega" }}</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Tipo</th>
+          <th>Cantidad</th>
+          <th>Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for it in o.items %}
+        <tr>
+          <td>{{ it.product_name }}</td>
+          <td>
+            {% if it.price_type == "kg_suelto" %}Kg suelto
+            {% elif it.price_type == "kg_10plus" %}10kg o mas
+            {% else %}Arpilla/bulto/caja{% endif %}
+          </td>
+          <td>{{ it.quantity }}</td>
+          <td>${{ it.subtotal }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Total: ${{ o.total }}</h3>
+
+    <form method="post" action="/admin/pedidos/{{ o.id }}/estado" class="inline-form">
+      <select name="status">
+        {% for s in ["pendiente","listo","completado","cancelado"] %}
+          <option value="{{ s }}" {% if o.status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <select name="payment_status">
+        {% for s in ["pendiente","pagado","abonado","fiado"] %}
+          <option value="{{ s }}" {% if o.payment_status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn">Actualizar</button>
+    </form>
+
+    <form method="post" action="/admin/pedidos/{{ o.id }}/eliminar" onsubmit="return confirmDelete(event, this)" style="margin-top:10px">
+      <button class="danger">Eliminar pedido</button>
+    </form>
+  </div>
 {% else %}
-<div class="card">No hay pedidos.</div>
+  <div class="card">No hay pedidos.</div>
 {% endfor %}
+</div>
 
 <div id="deleteModal" class="modal-bg" style="display:none">
   <div class="modal-box">
     <h2>Eliminar pedido</h2>
     <p>¿Seguro que quieres eliminar este pedido?</p>
     <div class="modal-actions">
-      <button class="danger" onclick="submitDelete()">Sí, eliminar</button>
+      <button class="danger" onclick="submitDelete()">Si, eliminar</button>
       <button class="btn" onclick="closeDeleteModal()">Cancelar</button>
     </div>
   </div>
@@ -93,4 +118,3 @@ function submitDelete(){
 }
 </script>
 {% endblock %}
-
