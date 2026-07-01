@@ -74,20 +74,120 @@ def save_products(
     price_kg_10plus: list[float] = Form(...),
     price_kg_bulk: list[float] = Form(...),
     bulk_label: list[str] = Form(...),
-    available: list[int] = Form(default=[]),
+    available_status: list[int] = Form(...),
 ):
-    available_set = set(int(x) for x in available)
     for i, product_id in enumerate(product_ids):
+        product_id = int(product_id)
         product = db.get(Product, product_id)
         if not product:
             continue
+
         product.price_kg_loose = price_kg_loose[i]
         product.price_kg_10plus = price_kg_10plus[i]
         product.price_kg_bulk = price_kg_bulk[i]
         product.bulk_label = bulk_label[i]
-        product.available = product_id in available_set
+        product.available = bool(int(available_status[i]))
     db.commit()
     return RedirectResponse("/admin/productos", status_code=303)
+
+
+
+@router.get("/admin/pedidos/nuevo", response_class=HTMLResponse)
+def new_order_page(request: Request, db: Session = Depends(get_db)):
+    redirect = require_login(request)
+    if redirect:
+        return redirect
+
+    warehouse = get_main_warehouse(db)
+    products = db.query(Product).filter_by(warehouse_id=warehouse.id, available=True).order_by(Product.id).all()
+    return templates.TemplateResponse(request, "new_order.html", {
+        "request": request,
+        "warehouse": warehouse,
+        "products": products,
+        "app_name": settings.APP_NAME,
+    })
+
+
+@router.post("/admin/pedidos/nuevo")
+def create_manual_order(
+    request: Request,
+    customer_name: str = Form(...),
+    delivery_place: str = Form(""),
+    product_ids: list[str] = Form(...),
+    price_types: list[str] = Form(...),
+    quantities: list[str] = Form(...),
+    db: Session = Depends(get_db),
+):
+    redirect = require_login(request)
+    if redirect:
+        return redirect
+
+    warehouse = get_main_warehouse(db)
+    state = get_state(db, warehouse.id)
+
+    order = Order(
+        folio=state.current_folio,
+        warehouse_id=warehouse.id,
+        customer_name=customer_name.strip(),
+        delivery_place=delivery_place.strip() or None,
+        pickup=False if delivery_place.strip() else True,
+        status="pendiente",
+        payment_status="pendiente",
+        in_queue=not state.orders_open,
+        has_prices=state.orders_open,
+        total=0,
+    )
+
+    total = 0
+
+    for product_id, price_type, quantity_raw in zip(product_ids, price_types, quantities):
+        if not product_id or not quantity_raw:
+            continue
+
+        try:
+            quantity = float(quantity_raw)
+        except ValueError:
+            continue
+
+        if quantity <= 0:
+            continue
+
+        product = db.get(Product, int(product_id))
+        if not product:
+            continue
+
+        if not state.orders_open:
+            unit_price = 0
+        elif price_type == "kg_suelto":
+            unit_price = float(product.price_kg_loose)
+        elif price_type == "kg_10plus":
+            unit_price = float(product.price_kg_10plus)
+        else:
+            unit_price = float(product.price_kg_bulk)
+
+        subtotal = quantity * unit_price
+
+        order.items.append(OrderItem(
+            product_id=product.id,
+            product_name=product.name,
+            price_type=price_type,
+            quantity=quantity,
+            unit_price=unit_price,
+            subtotal=subtotal,
+        ))
+
+        total += subtotal
+
+    if not order.items:
+        return RedirectResponse("/admin/pedidos/nuevo", status_code=303)
+
+    order.total = total
+    state.current_folio += 1
+
+    db.add(order)
+    db.commit()
+
+    return RedirectResponse("/admin/pedidos?status=pendiente", status_code=303)
 
 
 @router.get("/admin/pedidos", response_class=HTMLResponse)

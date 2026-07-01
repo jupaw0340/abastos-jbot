@@ -2,53 +2,83 @@
 {% block content %}
 <div class="card">
   <h2>Nuevo pedido manual</h2>
-  <form method="post" action="/admin/pedidos/nuevo">
+  <p class="muted">Agrega los productos que necesite el cliente.</p>
+
+  <form method="post" action="/admin/pedidos/nuevo" id="orderForm">
     <p>
       <label>Cliente</label><br>
-      <input style="max-width:400px;width:100%" type="text" name="customer_name" required>
+      <input style="max-width:420px;width:100%" type="text" name="customer_name" required>
     </p>
 
     <p>
       <label>Lugar de entrega (opcional)</label><br>
-      <input style="max-width:500px;width:100%" type="text" name="delivery_place" placeholder="Ej. Bodega de Julio">
+      <input style="max-width:520px;width:100%" type="text" name="delivery_place" placeholder="Ej. Bodega de Julio">
     </p>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Producto</th>
-          <th>Tipo precio</th>
-          <th>Cantidad</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for i in range(8) %}
-        <tr>
-          <td>
-            <select name="product_ids">
-              <option value="">-- seleccionar --</option>
-              {% for p in products %}
-                <option value="{{ p.id }}">{{ p.name }}</option>
-              {% endfor %}
-            </select>
-          </td>
-          <td>
-            <select name="price_types">
-              <option value="kg_suelto">Kg suelto</option>
-              <option value="kg_10plus">10kg o mas</option>
-              <option value="bulk">Arpilla/bulto/caja</option>
-            </select>
-          </td>
-          <td>
-            <input type="number" step="0.01" name="quantities" placeholder="0">
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+    <div id="items"></div>
 
-    <br>
-    <button class="btn">Crear pedido</button>
+    <button type="button" class="btn" onclick="addItem()">Agregar otro producto</button>
+    <br><br>
+    <button class="btn big-btn" type="submit">Crear pedido</button>
   </form>
 </div>
+
+<template id="itemTemplate">
+  <div class="card item-row">
+    <label>Producto</label>
+    <select name="product_ids" required>
+      <option value="">-- seleccionar --</option>
+      {% for p in products %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Tipo precio</label>
+    <select name="price_types">
+      <option value="kg_suelto">Kg suelto</option>
+      <option value="kg_10plus">10kg o mas</option>
+      <option value="bulk">Arpilla/bulto/caja</option>
+    </select>
+
+    <label>Cantidad</label>
+    <input type="number" step="0.01" min="0.01" name="quantities" required>
+
+    <br><br>
+    <button type="button" class="danger" onclick="removeItem(this)">Quitar producto</button>
+  </div>
+</template>
+
+<script>
+function addItem(){
+  const tpl = document.getElementById("itemTemplate");
+  document.getElementById("items").appendChild(tpl.content.cloneNode(true));
+}
+
+function removeItem(btn){
+  btn.closest(".item-row").remove();
+  if(document.querySelectorAll(".item-row").length === 0){
+    addItem();
+  }
+}
+
+document.getElementById("orderForm").addEventListener("submit", function(e){
+  const rows = document.querySelectorAll(".item-row");
+  let valid = false;
+
+  rows.forEach(row => {
+    const product = row.querySelector('select[name="product_ids"]').value;
+    const qty = parseFloat(row.querySelector('input[name="quantities"]').value || "0");
+    if(product && qty > 0){
+      valid = true;
+    }
+  });
+
+  if(!valid){
+    e.preventDefault();
+    alert("Agrega al menos un producto con cantidad mayor a 0.");
+  }
+});
+
+addItem();
+</script>
 {% endblock %}

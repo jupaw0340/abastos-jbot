@@ -12,7 +12,7 @@
 
 {% for o in orders %}
 <div class="card">
-  <h3>Folio #{{ o.folio }} â€” {{ o.customer_name }}</h3>
+  <h3>Folio #{{ o.folio }} - {{ o.customer_name }}</h3>
   <p>
     <span class="pill">{{ o.status }}</span>
     <span class="pill">{{ o.payment_status }}</span>
@@ -52,5 +52,3 @@
 <div class="card">No hay pedidos.</div>
 {% endfor %}
 {% endblock %}
-
-
